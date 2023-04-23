@@ -1337,7 +1337,7 @@ define role ZMIND2E_C_CARRIER {
 }
 ```
 
-### Authorization Master#
+### Authorization Master
 
 ```cds
 define behavior for /DMO/I_Travel_D alias Travel
