@@ -162,7 +162,7 @@ TODO
 
 ### Managed Scenario
 
-```abap
+```cds
 managed;
 
 define behavior for ZREX_I_Carrier alias Carrier
@@ -173,7 +173,7 @@ persistent table zmind2_carrier
 #### Managed Sencario with additional save
 
 Zusätzliche Speichersequenz für alle CDS Entitäten:
-```abap
+```cds
 managed with additional save;
 
 define behavior for ZREX_I_Carrier alias Carrier
@@ -182,7 +182,7 @@ persistent table zmind2_carrier
 ```
 
 Zusätzliche Speichersequenz für eine CDS Entität:
-```abap
+```cds
 managed;
 
 define behavior for ZREX_I_Carrier alias Carrier
@@ -194,7 +194,7 @@ with additional save
 #### Managed Scenario with unmanaged save
 
 Unmanaged Speichersequenz für alle CDS Entitäten:
-```abap
+```cds
 managed with unmanaged save;
 
 define behavior for ZREX_I_Carrier alias Carrier
@@ -202,7 +202,7 @@ define behavior for ZREX_I_Carrier alias Carrier
 ```
 
 Unmanmaged Speichersequenz für eine CDS Entität:
-```abap
+```cds
 managed;
 
 define behavior for ZREX_I_Carrier alias Carrier
@@ -212,7 +212,7 @@ with unmanged save
 
 ### Unmanaged Scenario
 
-```abap
+```cds
 unmanaged;
 
 define behavior for ZREX_I_Carrier alias Carrier
@@ -223,7 +223,7 @@ define behavior for ZREX_I_Carrier alias Carrier
 
 ### Behavior Definition
 
-```abap
+```cds
 managed implementation in class zbp_rex_i_carrier unique;
 strict ( 2 );
 extensible;
@@ -246,7 +246,7 @@ extensible
 
 #### Create, Update & Delete
 
-```abap
+```cds
 define behavior for ZREX_I_Carrier alias Carrier
 ...
 {
@@ -258,7 +258,7 @@ define behavior for ZREX_I_Carrier alias Carrier
 
 #### Read per Assoziation
 
-```abap
+```cds
 define behavior for ZREX_I_Carrier alias Carrier
 ...
 {
@@ -278,7 +278,7 @@ define behavior for ZREX_I_Connection alias Connection
 
 #### Create per Assoziation
 
-```abap
+```cds
 define behavior for ZREX_I_Carrier alias Carrier
 ...
 {
@@ -298,7 +298,7 @@ define behavior for ZREX_I_Connection alias Connection
 
 ### Feldmapping
 
-```abap
+```cds
 define behavior for ZREX_I_Carrier alias Carrier
 ...
 {
@@ -337,7 +337,7 @@ ls_po_entity = corresponding #( ls_po mapping to entity ).
 
 #### Felder: Statische Feature Control
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -352,7 +352,7 @@ define behavior for ZI_SalesOrder alias SalesOrder
 
 #### Operationen: Statische Feature Control
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -364,7 +364,7 @@ define behavior for ZI_SalesOrder alias SalesOrder
 #### Dynamische Feature Control
 
 Global:
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -402,7 +402,7 @@ ENDCLASS.
 ```
 
 Instanzbasiert:
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -529,7 +529,7 @@ define view entity ZREX_C_Flight
 
 ### Behavior Definition Projektion
 
-```abap
+```cds
 projection;
 strict ( 2 );
 
@@ -741,7 +741,7 @@ ROLLBACK ENTITIES.
 
 ### BP für Verhaltensdefinition
 
-```abap
+```cds
 managed implementation in class zbp_rex_i_carrier unique;
 strict ( 2 );
 
@@ -751,7 +751,7 @@ define behavior for ZREX_I_Carrier alias Carrier
 
 ### BP für CDS Entität
 
-```abap
+```cds
 managed;
 strict ( 2 );
 
@@ -826,7 +826,7 @@ APPEND VALUE #( %tky = <carrier>-%tky
 
 ### Frühe, interne Nummernvergabe
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 early numbering
 ...
@@ -834,7 +834,7 @@ early numbering
     ...
 ```
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -1007,7 +1007,7 @@ ENDCLASS.
 
 ### Späte Nummernvergabe
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 late numbering
 ...
@@ -1022,7 +1022,7 @@ late numbering
 
 ### Ermittlungen definieren
 
-```abap
+```cds
 define behavior for ZI_SalesOrderItem alias Item
 ...
 {
@@ -1033,7 +1033,7 @@ define behavior for ZI_SalesOrderItem alias Item
 
 ### Ermittlungen implementieren
 
-```abap
+```cds
 define behavior for ZMIND2RAP_I_Booking alias Booking
 ...
 {
@@ -1067,7 +1067,7 @@ ENDMETHOD.
 ### Validierungen definieren
 
 Operationen als Auslösebedingung:
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -1077,7 +1077,7 @@ define behavior for ZI_SalesOrder alias SalesOrder
 ```
 
 Felder als Ausläsebedingung:
-```abap
+```cds
 define behavior for ZI_SalesOrderItem alias Item
 ...
 {
@@ -1087,7 +1087,7 @@ define behavior for ZI_SalesOrderItem alias Item
 ```
 
 Kombination aus Operation und Feld:
-```abap
+```cds
 define behavior for ZI_SalesOrderItem alias Item
 ...
 {
@@ -1143,7 +1143,7 @@ METHOD validate_agency.
 
 ### Vorprüfungen
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -1171,7 +1171,7 @@ ENDCLASS.
 
 ## Aktionen
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -1182,7 +1182,7 @@ define behavior for ZI_SalesOrder alias SalesOrder
 
 ### statische Aktionen
 
-```abap
+```cds
 define behavior for ZI_Address alias Address
 ...
 {
@@ -1193,7 +1193,7 @@ define behavior for ZI_Address alias Address
 
 ### Factory Aktionen
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -1202,7 +1202,7 @@ define behavior for ZI_SalesOrder alias SalesOrder
 }
 ```
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -1213,7 +1213,7 @@ define behavior for ZI_SalesOrder alias SalesOrder
 
 ### Eingabeparameter
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 ...
 {
@@ -1224,7 +1224,7 @@ define behavior for ZI_SalesOrder alias SalesOrder
 
 ### Rückgabeparameter
 
-```abap
+```cds
 define behavior for ZI_Address alias Address
 ...
 {
@@ -1235,7 +1235,7 @@ define behavior for ZI_Address alias Address
 
 ### Aktionen implementieren
 
-```abap
+```cds
 define behavior for ZMIND2RAP_I_Travel alias Travel
 ...
 {
@@ -1267,7 +1267,7 @@ ENDMETHOD.
 
 ### Aktionen: Dynamische Feature Control
 
-```abap
+```cds
 define behavior for ZMIND2RAP_I_Travel alias Travel
 ...
 {
@@ -1339,7 +1339,7 @@ define role ZMIND2E_C_CARRIER {
 
 ### Authorization Master#
 
-```abap
+```cds
 define behavior for /DMO/I_Travel_D alias Travel
 ...
 authorization master ( global, instance )
@@ -1354,7 +1354,7 @@ authorization master ( global, instance )
 
 ### Authorization Dependent
 
-```abap
+```cds
 define behavior for /DMO/I_Booking_D alias Booking
 ...
 authorization dependent by _Travel
@@ -1555,7 +1555,7 @@ ENDCLASS.
 
 ### Pessimistische Sperren
 
-```abap
+```cds
 define behavior for /DMO/I_Travel_D alias Travel
 lock master
 ...
@@ -1574,7 +1574,7 @@ lock dependent by _Travel
 
 ### Optimistische Sperren
 
-```abap
+```cds
 define behavior for /DMO/I_Travel_M alias Travel
 etag master LocalLastChangedAt
 ...
@@ -1584,7 +1584,7 @@ etag master LocalLastChangedAt
 ...
 ```
 
-```abap
+```cds
 define behavior for ZI_SalesOrder alias SalesOrder
 etag master LastChangedAt
 ...
@@ -1599,7 +1599,7 @@ etag dependant by _SalesOrder
 
 ## Draft Handling
 
-```abap
+```cds
 managed;
 strict;
 with draft;
@@ -1608,7 +1608,7 @@ define behavior for /DMO/I_Travel_D alias Travel
 
 ### Draft Tabellen
 
-```abap
+```cds
 ...
 define behavior for /DMO/I_Travel_D alias Travel
 ...
@@ -1625,7 +1625,7 @@ draft table /dmo/d_booking_d
 
 ### Draft etag Handling
 
-```abap
+```cds
 define behavior for /DMO/I_Travel_D alias Travel
 ...
 total etag LastChangedAt
@@ -1634,7 +1634,7 @@ total etag LastChangedAt
 
 ### Draft Assoziationen
 
-```abap
+```cds
 define behavior for /DMO/I_Travel_D alias Travel
 ...
 {
@@ -1646,7 +1646,7 @@ define behavior for /DMO/I_Travel_D alias Travel
 
 ### Draft Aktionen
 
-```abap
+```cds
 define behavior for /DMO/I_Travel_D alias Travel
 ...
 {
@@ -1661,7 +1661,7 @@ define behavior for /DMO/I_Travel_D alias Travel
         validation validateCustomer;
         ...
     }
-    
+
     validation validateCustomer on save { ... }
     validation validateAgency on save { ... }
     ...
