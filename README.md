@@ -1340,6 +1340,145 @@ define root view entity ZMIND2RAP_C_Travel
   ...
 ```
 
+## Funktionen
+
+```cds
+define behavior for DEMO_CDS_FUNCTION_1 alias PurchaseDocument
+{
+  ...
+
+  // instance function
+  function getDetails result [0..*] $self;
+
+  // static function
+  static function calculateTotal result [1] demo_sales_total_price;
+
+  //function with input parameter
+  function calculateDiscount parameter DEMO_CDS_DEDUCT_DISCOUNT
+                             result [1] $self;
+  ...
+}
+```
+
+```abap
+CLASS lhc_PurchaseDocument
+DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    METHODS getDetails FOR READ
+      IMPORTING keys FOR FUNCTION PurchaseDocument~getDetails
+        RESULT result.
+    METHODS calculateTotal FOR READ
+      IMPORTING keys FOR FUNCTION PurchaseDocument~calculateTotal
+        RESULT result.
+    METHODS calculateDiscount FOR READ
+      IMPORTING keys FOR FUNCTION PurchaseDocument~calculateDiscount
+        RESULT result.
+    METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
+      IMPORTING keys REQUEST requested_authorizations FOR PurchaseDocument RESULT result.
+ENDCLASS.
+
+CLASS lhc_PurchaseDocument IMPLEMENTATION.
+  METHOD getDetails.
+    DATA(lt_keys) = keys.
+    CHECK lt_keys IS NOT INITIAL.
+
+    READ ENTITIES OF demo_cds_function_1 IN LOCAL MODE
+      ENTITY PurchaseDocument
+        FIELDS ( PurchaseDocument Price Status )
+        WITH CORRESPONDING #( lt_keys )
+      RESULT DATA(lt_item)
+      FAILED DATA(read_failed).
+
+    failed = CORRESPONDING #( DEEP read_failed ).
+
+    LOOP AT lt_item ASSIGNING FIELD-SYMBOL(<fs_item>).
+     APPEND VALUE #( %tky   = <fs_item>-%tky
+                     %param = CORRESPONDING #( <fs_item> ) ) TO result.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD calculateTotal.
+    SELECT *
+    FROM demo_purch_doc
+    WHERE status = 'O'
+    INTO TABLE @DATA(lt_db_new_purch).
+
+    READ ENTITIES OF demo_cds_function_1 IN LOCAL MODE
+      ENTITY PurchaseDocument
+        FIELDS ( Price )
+        WITH CORRESPONDING #( lt_db_new_purch )
+      RESULT DATA(read_result)
+      FAILED failed
+      REPORTED reported.
+
+    DATA lv_sum TYPE demo_cds_function_1-Price.
+    CLEAR lv_sum.
+
+    LOOP AT read_result ASSIGNING FIELD-SYMBOL(<fs_new_purch>).
+      lv_sum += <fs_new_purch>-Price.
+    ENDLOOP.
+
+    result = VALUE #( ( %cid    = keys[ 1 ]-%cid
+                        %param  = lv_sum )  ).
+  ENDMETHOD.
+
+  METHOD calculateDiscount.
+    DATA lt_reduced_purch TYPE TABLE FOR FUNCTION RESULT
+      demo_cds_function_1\\PurchaseDocument~calculateDiscount.
+    DATA lt_update_purch TYPE TABLE FOR UPDATE
+      demo_cds_function_1\\PurchaseDocument.
+    DATA(lt_keys) = keys.
+
+    LOOP AT lt_keys
+    ASSIGNING FIELD-SYMBOL(<fs_key>)
+    WHERE %param-discount_percent IS INITIAL
+                                  OR %param-discount_percent > 100
+                                  OR %param-discount_percent <= 0.
+
+      APPEND VALUE #( %tky = <fs_key>-%tky ) TO failed-purchasedocument.
+      APPEND VALUE #( %tky = <fs_key>-%tky
+                      %msg = new_message_with_text(
+                      severity = if_abap_behv_message=>severity-error
+                      text = 'function failed' )
+                      %element-price = if_abap_behv=>mk-on )
+                      TO reported-purchasedocument.
+      DELETE lt_keys.
+    ENDLOOP.
+
+    CHECK lt_keys IS NOT INITIAL.
+
+    "get total price
+    READ ENTITIES OF demo_cds_function_1 IN LOCAL MODE
+      ENTITY PurchaseDocument
+        ALL FIELDS
+        WITH CORRESPONDING #( lt_keys )
+      RESULT DATA(lt_purc)
+      FAILED DATA(read_failed).
+
+    failed = CORRESPONDING #( DEEP read_failed ).
+
+    LOOP AT lt_purc ASSIGNING FIELD-SYMBOL(<fs_purch>).
+      DATA lv_percentage TYPE decfloat16.
+      DATA(lv_discount_percent) = lt_keys[
+      KEY entity  %tky = <fs_purch>-%tky ]-%param-discount_percent.
+      lv_percentage =  lv_discount_percent / 100 .
+      <fs_purch>-Price = <fs_purch>-price * ( 1 - lv_percentage ) .
+
+      APPEND VALUE #( %tky               = <fs_purch>-%tky
+                      %param             = CORRESPONDING #( <fs_purch> ) )
+                      TO lt_reduced_purch.
+    ENDLOOP.
+
+    result = VALUE #( FOR purchase IN lt_reduced_purch
+                          ( %tky   = purchase-%tky
+                            %param = purchase-%param ) ).
+  ENDMETHOD.
+  METHOD get_instance_authorizations.
+  ENDMETHOD.
+
+ENDCLASS.
+```
+
 ## Berechtigungen
 
 ### Lesende Berechtigungen
