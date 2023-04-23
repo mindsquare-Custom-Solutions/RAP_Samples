@@ -116,6 +116,31 @@ define view I_Currency
 }
 ```
 
+#### Annotationen für administrative Felder
+
+```cds
+define view entity ZMIND2E_I_Carrier
+  as select from zmind2_carrier
+{
+  key carrier_id            as AirlineId,
+
+      @Semantics.user.createdBy: true
+      local_created_by      as CreatedBy,
+
+      @Semantics.systemDateTime.createdAt: true
+      local_created_at      as CreatedAt,
+
+      @Semantics.systemDateTime.lastChangedAt: true
+      last_changed_at       as LastChangedAt,
+
+      @Semantics.user.lastChangedBy: true
+      local_last_changed_by as LastChangedBy,
+
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      local_last_changed_at as LocalLastChangedAt
+}
+```
+
 ### Abstract CDS Entity
 
 ```cds
@@ -312,9 +337,115 @@ ls_po_entity = corresponding #( ls_po mapping to entity ).
 
 #### Felder: Statische Feature Control
 
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    field ( numbering : managed ) SalesOrderUuid;
+    // Schlüssel auf nur lesend setzen
+    field ( readonly ) SalesOrderUuid;
+    field ( mandatory : create ) SalesOrderType;
+
+    field( mandatory : create, readonly : update ) PersonId;
+    ...
+```
+
 #### Operationen: Statische Feature Control
 
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    internal create;
+    ...
+}
+```
+
 #### Dynamische Feature Control
+
+Global:
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    ...
+    create ( features : global );
+}
+```
+
+```abap
+CLASS lhc_handler DEFINITION INHERITING FROM cl_abap_behavior_handler.
+    PRIVATE SECTION.
+    METHODS get_global_features FOR GLOBAL FEATURES
+        IMPORTING REQUEST requested_features
+        FOR entity RESULT result.
+ENDCLASS.
+
+CLASS lhc_handler IMPLEMENTATION.
+    METHOD get_global_features.
+        result = VALUE #(
+            " Feature Control für Aktion
+            %features-%action-action_name = COND #( WHEN condition
+                                                        THEN if_abap_behv=>fc-o-disabled
+                                                    ELSE if_abap_behv=>fc-o-enabled )
+            %features-%update = COND #( WHEN condition
+                                            THEN if_abap_behv=>fc-o-disabled
+                                        ELSE if_abap_behv=>fc-o-enabled )
+
+            " Feature Control für eine create-Operation per Assoziation
+            %assoc-_Assoc = COND #( WHEN condition
+                                        THEN if_abap_behv=>fc-o-disabled
+                                    ELSE if_abap_behv=>fc-o-enabled )
+        ).
+    ENDMETHOD.
+ENDCLASS.
+```
+
+Instanzbasiert:
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    ...
+    create ( features : instance );
+}
+```
+
+```abap
+CLASS lhc_handler DEFINITION INHERITING FROM cl_abap_behavior_handler.
+    PRIVATE SECTION.
+    METHODS get_features FOR INSTANCE FEATURES
+        IMPORTING keys
+        FOR entity RESULT result.
+ENDCLASS.
+
+CLASS lhc_handler IMPLEMENTATION.
+    METHOD get_features.
+        READ ENTITIES OF /dmo/i_travel_m IN LOCAL MODE
+            ENTITY travel
+                FIELDS ( travel_id overall_status )
+                WITH CORRESPONDING #( keys )
+            RESULT DATA(lt_travel_result).
+
+        result = VALUE #( FOR ls_travel IN lt_travel_result
+                          ( %key = ls_travel-%key
+                            
+                            %field-travel_id = if_abap_behv=>fc-f-read_only
+                            
+                            %features-%action-rejectTravel = COND #( WHEN ls_travel-overall_status = 'X'
+                                                                        THEN if_abap_behv=>fc-o-disabled
+                                                                     ELSE if_abap_behv=>fc-o-enabled )
+                            %features-%action-acceptTravel = COND #( WHEN ls_travel-overall_status = 'A'
+                                                                        THEN if_abap_behv=>fc-o-disabled
+                                                                     ELSE if_abap_behv=>fc-o-enabled )
+                            
+                            %assoc-_Booking = COND #( WHEN ls_travel-overall_status = 'X'
+                                                        THEN if_abap_behv=>fc-o-disabled
+                                                      ELSE if_abap_behv=>fc-o-enabled )
+        ) ).
+    ENDMETHOD.
+ENDCLASS.
+```
 
 ### Projection View Entity
 
@@ -681,74 +812,859 @@ ENDCLASS.
 
 ### Messages
 
+```abap
+APPEND VALUE #( %tky = <carrier>-%tky
+                %msg = new_message(
+                    id = 'ZMC_REX_CARRIER'
+                    number = '001'
+                    severity = if_abap_behv_message=>severity-error )
+                    %element-CarrierId = if_abap_behv=>mk-on 
+                ) TO reported-carrier.
+```
+
 ## Nummernvergabe
 
 ### Frühe, interne Nummernvergabe
 
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+early numbering
+...
+{
+    ...
+```
+
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    field ( numbering : managed ) SalesOrderUuid;
+    ...
+}
+```
+
 #### Nummernvergabe mit Nummernkreis
+
+```abap
+CLASS lhc_travel DEFINITION INHERITING FROM cl_abap_behavior_handler
+
+  PRIVATE SECTION.
+    METHODS earlynumbering_create FOR NUMBERING
+      IMPORTING entities FOR CREATE travel.
+
+ENDCLASS.
+
+CLASS lhc_travel IMPLEMENTATION.
+
+  METHOD earlynumbering_create.
+
+    DATA:
+      entity        TYPE STRUCTURE FOR CREATE /DMO/I_Travel_M,
+      travel_id_max TYPE /dmo/travel_id.
+
+    " Ensure Travel ID is not set yet (idempotent)- must be checked when BO is draft-enabled
+    LOOP AT entities INTO entity WHERE travel_id IS NOT INITIAL.
+      APPEND CORRESPONDING #( entity ) TO mapped-travel.
+    ENDLOOP.
+
+    DATA(entities_wo_travelid) = entities.
+    DELETE entities_wo_travelid WHERE travel_id IS NOT INITIAL.
+
+    " Get Numbers
+    TRY.
+        cl_numberrange_runtime=>number_get(
+          EXPORTING
+            nr_range_nr       = '01'
+            object            = '/DMO/TRV_M'
+            quantity          = CONV #( lines( entities_wo_travelid ) )
+          IMPORTING
+            number            = DATA(number_range_key)
+            returncode        = DATA(number_range_return_code)
+            returned_quantity = DATA(number_range_returned_quantity)
+        ).
+      CATCH cx_number_ranges INTO DATA(lx_number_ranges).
+        LOOP AT entities_wo_travelid INTO entity.
+          APPEND VALUE #(  %cid = entity-%cid
+                           %key = entity-%key
+                           %msg = lx_number_ranges
+                        ) TO reported-travel.
+          APPEND VALUE #(  %cid = entity-%cid
+                           %key = entity-%key
+                        ) TO failed-travel.
+        ENDLOOP.
+        EXIT.
+    ENDTRY.
+
+    CASE number_range_return_code.
+      WHEN '1'.
+        " 1 - the returned number is in a critical range (specified under “percentage warning” in the object definition)
+        LOOP AT entities_wo_travelid INTO entity.
+          APPEND VALUE #( %cid = entity-%cid
+                          %key = entity-%key
+                          %msg = NEW /dmo/cm_flight_messages(
+                                      textid = /dmo/cm_flight_messages=>number_range_depleted
+                                      severity = if_abap_behv_message=>severity-warning )
+                        ) TO reported-travel.
+        ENDLOOP.
+
+      WHEN '2' OR '3'.
+        " 2 - the last number of the interval was returned
+        " 3 - if fewer numbers are available than requested,  the return code is 3
+        LOOP AT entities_wo_travelid INTO entity.
+          APPEND VALUE #( %cid = entity-%cid
+                          %key = entity-%key
+                          %msg = NEW /dmo/cm_flight_messages(
+                                      textid = /dmo/cm_flight_messages=>not_sufficient_numbers
+                                      severity = if_abap_behv_message=>severity-warning )
+                        ) TO reported-travel.
+          APPEND VALUE #( %cid        = entity-%cid
+                          %key        = entity-%key
+                          %fail-cause = if_abap_behv=>cause-conflict
+                        ) TO failed-travel.
+        ENDLOOP.
+        EXIT.
+    ENDCASE.
+
+    " At this point ALL entities get a number!
+    ASSERT number_range_returned_quantity = lines( entities_wo_travelid ).
+
+    travel_id_max = number_range_key - number_range_returned_quantity.
+
+    " Set Travel ID
+    LOOP AT entities_wo_travelid INTO entity.
+      travel_id_max += 1.
+      entity-travel_id = travel_id_max .
+
+      APPEND VALUE #( %cid  = entity-%cid
+                      %key  = entity-%key
+                    ) TO mapped-travel.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+ENDCLASS.
+```
 
 #### Nummernvergabe durch Hochzählen
 
+```abap
+CLASS lhc_travel DEFINITION INHERITING FROM cl_abap_behavior_handler
+
+  PRIVATE SECTION.
+    METHODS earlynumbering_cba_booking FOR NUMBERING
+      IMPORTING entities FOR CREATE travel\_booking.
+
+ENDCLASS.
+
+CLASS lhc_travel IMPLEMENTATION.
+
+  METHOD earlynumbering_cba_booking.
+    DATA: max_booking_id TYPE /dmo/booking_id.
+
+    READ ENTITIES OF /DMO/I_Travel_M IN LOCAL MODE
+      ENTITY travel BY \_booking
+        FROM CORRESPONDING #( entities )
+        LINK DATA(bookings).
+
+    " Loop over all unique TravelIDs
+    LOOP AT entities ASSIGNING FIELD-SYMBOL(<travel_group>) GROUP BY <travel_group>-travel_id.
+
+      " Get highest booking_id from bookings belonging to travel
+      max_booking_id = REDUCE #( INIT max = CONV /dmo/booking_id( '0' )
+                                 FOR  booking IN bookings USING KEY entity WHERE ( source-travel_id  = <travel_group>-travel_id )
+                                 NEXT max = COND /dmo/booking_id( WHEN booking-target-booking_id > max
+                                                                    THEN booking-target-booking_id
+                                                                    ELSE max )
+                               ).
+      " Get highest assigned booking_id from incoming entities
+      max_booking_id = REDUCE #( INIT max = max_booking_id
+                                 FOR  entity IN entities USING KEY entity WHERE ( travel_id  = <travel_group>-travel_id )
+                                 FOR  target IN entity-%target
+                                 NEXT max = COND /dmo/booking_id( WHEN   target-booking_id > max
+                                                                    THEN target-booking_id
+                                                                    ELSE max )
+                               ).
+
+      " Loop over all entries in entities with the same TravelID
+      LOOP AT entities ASSIGNING FIELD-SYMBOL(<travel>) USING KEY entity WHERE travel_id = <travel_group>-travel_id.
+
+        " Assign new booking-ids if not already assigned
+        LOOP AT <travel>-%target ASSIGNING FIELD-SYMBOL(<booking_wo_numbers>).
+          APPEND CORRESPONDING #( <booking_wo_numbers> ) TO mapped-booking ASSIGNING FIELD-SYMBOL(<mapped_booking>).
+          IF <booking_wo_numbers>-booking_id IS INITIAL.
+            max_booking_id += 10 .
+            <mapped_booking>-booking_id = max_booking_id .
+          ENDIF.
+        ENDLOOP.
+
+      ENDLOOP.
+
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+```
+
 ### Späte Nummernvergabe
+
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+late numbering
+...
+{
+    // Schlüsselfeld auf »nur lesend« setzen
+    field ( readonly ) SalesOrderId;
+    ...
+}
+```
 
 ## Ermittlungen
 
 ### Ermittlungen definieren
 
+```abap
+define behavior for ZI_SalesOrderItem alias Item
+...
+{
+    ...
+    determination calcTotalAmount on modify { delete; field ItemAmount }
+}
+```
+
 ### Ermittlungen implementieren
+
+```abap
+define behavior for ZMIND2RAP_I_Booking alias Booking
+...
+{
+  ...
+  determination setBookingDate on modify { create; }
+}
+```
+
+```abap
+METHOD setBookingDate.
+    READ ENTITIES OF ZMIND2RAP_I_Travel IN LOCAL MODE
+        ENTITY Booking
+            FIELDS ( BookingDate )
+            WITH CORRESPONDING #( keys )
+        RESULT DATA(bookings).
+
+    DELETE bookings WHERE BookingDate IS NOT INITIAL.
+    CHECK bookings IS NOT INITIAL.
+
+    MODIFY ENTITIES OF ZMIND2RAP_I_Travel IN LOCAL MODE
+        ENTITY Booking
+            UPDATE FIELDS ( BookingDate )
+            WITH VALUE #( FOR booking IN bookings
+                          ( %tky = booking-%tky
+                            BookingDate = cl_abap_context_info=>get_system_date( ) ) ).
+ENDMETHOD.
+```
 
 ## Validierung
 
 ### Validierungen definieren
 
+Operationen als Auslösebedingung:
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    ...
+    validation validateOnChange on save { create; update; }
+}
+```
+
+Felder als Ausläsebedingung:
+```abap
+define behavior for ZI_SalesOrderItem alias Item
+...
+{
+    ...
+    validation validateMaterial on save { field MaterialId; }
+}
+```
+
+Kombination aus Operation und Feld:
+```abap
+define behavior for ZI_SalesOrderItem alias Item
+...
+{
+    ...
+    field ( mandatory ) MaterialId;
+    validation validateMaterial on save { create; field MaterialId; }
+}
+```
+
 ### Validierungen implementieren
+
+```abap
+METHOD validate_agency.
+    " Read relevant travel instance data
+    READ ENTITIES OF /DMO/I_Travel_M IN LOCAL MODE
+        ENTITY travel
+            FIELDS ( agency_id )
+            WITH CORRESPONDING #(  keys )
+        RESULT DATA(travels).
+
+    DATA agencies TYPE SORTED TABLE OF /dmo/agency WITH UNIQUE KEY agency_id.
+
+    " Optimization of DB select: extract distinct non-initial agency IDs
+    agencies = CORRESPONDING #(  travels DISCARDING DUPLICATES MAPPING agency_id = agency_id EXCEPT * ).
+    DELETE agencies WHERE agency_id IS INITIAL.
+    IF  agencies IS NOT INITIAL.
+
+      " check if agency ID exist
+      SELECT FROM /dmo/agency FIELDS agency_id
+        FOR ALL ENTRIES IN @agencies
+        WHERE agency_id = @agencies-agency_id
+        INTO TABLE @DATA(agencies_db).
+    ENDIF.
+
+    " Raise msg for non existing and initial agency id
+    LOOP AT travels INTO DATA(travel).
+      IF travel-agency_id IS INITIAL
+         OR NOT line_exists( agencies_db[ agency_id = travel-agency_id ] ).
+
+        APPEND VALUE #(  %tky = travel-%tky ) TO failed-travel.
+        APPEND VALUE #(  %tky = travel-%tky
+                         %msg      = NEW /dmo/cm_flight_messages(
+                                          textid    = /dmo/cm_flight_messages=>agency_unkown
+                                          agency_id = travel-agency_id
+                                          severity  = if_abap_behv_message=>severity-error )
+                         %element-agency_id = if_abap_behv=>mk-on
+                      ) TO reported-travel.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+```
 
 ### Vorprüfungen
 
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    create ( precheck );
+    ...
+}
+```
+
+```abap
+CLASS lhc_salesorder DEFINITION INHERITING FROM cl_abap_behavior_handler.
+    ...
+    METHODS testCheck for PRECHECK
+        IMPORTING keys FOR ACTION SalesOrder~test.
+ENDCLASS.
+
+CLASS lhc_salesorder IMPLEMENTATION.
+    ...
+    METHOD testcheck.
+        READ ENTITIES OF ...
+        IF ...
+        ...
+    ENDMETHOD.
+ENDCLASS.
+```
+
 ## Aktionen
+
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    ...
+    action cancel;
+}
+```
 
 ### statische Aktionen
 
+```abap
+define behavior for ZI_Address alias Address
+...
+{
+    ...
+    static action markDuplicates;
+}
+```
+
 ### Factory Aktionen
+
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    ...
+    factory action copy [1];
+}
+```
+
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    ...
+    factory action deepCopy parameter zrap_s_so_copy_ops [1];
+}
+```
 
 ### Eingabeparameter
 
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+...
+{
+    ...
+    action cancel parameter ZRAP_A_CancellationOpts;
+}
+```
+
 ### Rückgabeparameter
+
+```abap
+define behavior for ZI_Address alias Address
+...
+{
+    ...
+    action setAsDefault result [1] $self;
+}
+```
 
 ### Aktionen implementieren
 
+```abap
+define behavior for ZMIND2RAP_I_Travel alias Travel
+...
+{
+    ...
+    action ( features : instance ) cancelTravel result [1] $self;
+}
+```
+
+```abap
+METHOD cancelTravel.
+    MODIFY ENTITIES OF ZMIND2RAP_I_Travel IN LOCAL MODE
+           ENTITY Travel
+              UPDATE FIELDS ( Status )
+              WITH VALUE #( FOR key IN keys
+                            ( %tky = key-%tky
+                              status = 'X' ) ).
+
+    READ ENTITIES OF ZMIND2RAP_I_Travel IN LOCAL MODE
+      ENTITY travel
+         ALL FIELDS WITH
+         CORRESPONDING #( keys )
+       RESULT DATA(travels).
+
+    result = VALUE #( FOR travel IN travels
+                      ( %tky = travel-%tky
+                        %param = travel ) ).
+ENDMETHOD.
+```
+
 ### Aktionen: Dynamische Feature Control
 
+```abap
+define behavior for ZMIND2RAP_I_Travel alias Travel
+...
+{
+    ...
+    action ( features : instance ) bookTravel parameter ZMIND2RAP_A_BookTravel result [1] $self;
+    action ( features : instance ) cancelTravel result [1] $self;
+}
+```
+
+```abap
+METHOD get_features.
+        READ ENTITIES OF ZMIND2RAP_I_Travel IN LOCAL MODE
+            ENTITY travel
+                FIELDS ( travel_id overall_status )
+                WITH CORRESPONDING #( keys )
+            RESULT DATA(lt_travel_result).
+
+        result = VALUE #( FOR ls_travel IN lt_travel_result
+                          ( %tky = ls_travel-%tky
+                            
+                            %field-travel_id = if_abap_behv=>fc-f-read_only
+                            
+                            %features-%action-rejectTravel = COND #( WHEN ls_travel-overall_status = 'X'
+                                                                        THEN if_abap_behv=>fc-o-disabled
+                                                                     ELSE if_abap_behv=>fc-o-enabled )
+                            %features-%action-acceptTravel = COND #( WHEN ls_travel-overall_status = 'A'
+                                                                        THEN if_abap_behv=>fc-o-disabled
+                                                                     ELSE if_abap_behv=>fc-o-enabled )
+                            
+                            %assoc-_Booking = COND #( WHEN ls_travel-overall_status = 'X'
+                                                        THEN if_abap_behv=>fc-o-disabled
+                                                      ELSE if_abap_behv=>fc-o-enabled )
+        ) ).
+```
+
 ### Aktionen: Fiori Elements
+
+```cds
+define root view entity ZMIND2RAP_C_Travel
+  provider contract transactional_query
+  as projection on ZMIND2RAP_I_Travel
+{
+    @UI.lineItem: [
+        { type: #FOR_ACTION, dataAction: 'bookTravel', label: 'Book Travel', position: 10 },
+        { type: #FOR_ACTION, dataAction: 'cancelTravel', label: 'Cancel Travel', position: 20 }
+    ]
+    @UI.identification: [
+        { type: #FOR_ACTION, dataAction: 'bookTravel', label: 'Book Travel', position: 10 },
+        { type: #FOR_ACTION, dataAction: 'cancelTravel', label: 'Cancel Travel', position: 20 }
+    ]
+
+  key TravelId,
+  ...
+```
 
 ## Berechtigungen
 
 ### Lesende Berechtigungen
 
-### Authorization Master
+```cds
+@EndUserText.label: 'Carrier'
+@MappingRole: true
+define role ZMIND2E_C_CARRIER {
+    grant select on ZMIND2E_C_CARRIER
+    where (AirlineId) = aspect pfcg_auth(S_CARRID, CARRID, ACTVT = '03' );
+    
+}
+```
+
+### Authorization Master#
+
+```abap
+define behavior for /DMO/I_Travel_D alias Travel
+...
+authorization master ( global, instance )
+{
+    create;
+    update;
+    delete;
+    action acceptTravel ...;
+    ...
+}
+```
 
 ### Authorization Dependent
 
+```abap
+define behavior for /DMO/I_Booking_D alias Booking
+...
+authorization dependent by _Travel
+{
+    update;
+    delete;
+    association _Travel { }
+}
+```
+
 ### Global Authorization
+
+```abap
+CLASS lhc_travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
+
+  PRIVATE SECTION.
+
+...
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR travel RESULT result.
+
+ENDCLASS.
+
+CLASS lhc_travel IMPLEMENTATION.
+  METHOD get_global_authorizations.
+    IF requested_authorizations-%create EQ if_abap_behv=>mk-on.
+      IF is_create_granted( ) = abap_true.
+        result-%create = if_abap_behv=>auth-allowed.
+      ELSE.
+        result-%create = if_abap_behv=>auth-unauthorized.
+        APPEND VALUE #( %msg    = NEW /DMO/CM_FLIGHT_MESSAGES(
+                                       textid   = /DMO/CM_FLIGHT_MESSAGES=>not_authorized
+                                       severity = if_abap_behv_message=>severity-error )
+                        %global = if_abap_behv=>mk-on 
+                      ) TO reported-travel.
+
+      ENDIF.
+    ENDIF.
+
+    "Edit is treated like update
+    IF requested_authorizations-%update                =  if_abap_behv=>mk-on OR
+       requested_authorizations-%action-Edit           =  if_abap_behv=>mk-on.
+
+      IF  is_update_granted( ) = abap_true.
+        result-%update                =  if_abap_behv=>auth-allowed.
+        result-%action-Edit           =  if_abap_behv=>auth-allowed.
+
+      ELSE.
+        result-%update                =  if_abap_behv=>auth-unauthorized.
+        result-%action-Edit           =  if_abap_behv=>auth-unauthorized.
+
+        APPEND VALUE #( %msg    = NEW /DMO/CM_FLIGHT_MESSAGES(
+                                       textid   = /DMO/CM_FLIGHT_MESSAGES=>not_authorized
+                                       severity = if_abap_behv_message=>severity-error )
+                        %global = if_abap_behv=>mk-on 
+                      ) TO reported-travel.
+
+      ENDIF.
+    ENDIF.
+
+
+    IF requested_authorizations-%delete =  if_abap_behv=>mk-on.
+      IF is_delete_granted( ) = abap_true.
+        result-%delete = if_abap_behv=>auth-allowed.
+      ELSE.
+        result-%delete = if_abap_behv=>auth-unauthorized.
+        APPEND VALUE #( %msg    = NEW /DMO/CM_FLIGHT_MESSAGES(
+                                       textid   = /DMO/CM_FLIGHT_MESSAGES=>not_authorized
+                                       severity = if_abap_behv_message=>severity-error )
+                        %global = if_abap_behv=>mk-on 
+                       ) TO reported-travel.
+      ENDIF.
+    ENDIF.
+
+  ENDMETHOD.
+
+ENDCLASS.
+```
 
 ### Instance Authorization
 
-### Precheck
+```abap
+CLASS lhc_travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
+
+  PRIVATE SECTION.
+
+...
+    METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
+      IMPORTING keys REQUEST requested_authorizations FOR travel RESULT result.
+
+ENDCLASS.
+
+CLASS lhc_travel IMPLEMENTATION.
+  METHOD get_instance_authorizations.
+
+    DATA: update_requested TYPE abap_bool,
+          delete_requested TYPE abap_bool,
+          update_granted   TYPE abap_bool,
+          delete_granted   TYPE abap_bool.
+
+    READ ENTITIES OF /DMO/R_Travel_D IN LOCAL MODE
+      ENTITY Travel
+        FIELDS ( AgencyID )
+        WITH CORRESPONDING #( keys )
+    RESULT DATA(travels)
+    FAILED failed.
+
+    CHECK travels IS NOT INITIAL.
+
+    "Select country_code and agency of corresponding persistent travel instance
+    "authorization  only checked against instance that have active persistence
+    SELECT  FROM /DMO/A_TRAVEL_D AS travel  INNER JOIN /DMO/AGENCY AS agency
+          ON travel~agency_id = agency~agency_id
+          FIELDS travel~travel_uuid , travel~agency_id, agency~country_code
+          FOR ALL ENTRIES IN @travels WHERE travel_uuid EQ @travels-TravelUUID
+          INTO  TABLE @DATA(travel_agency_country).
+
+
+    "edit is treated like update
+    update_requested = COND #( WHEN requested_authorizations-%update                = if_abap_behv=>mk-on OR
+                                    requested_authorizations-%action-Edit           = if_abap_behv=>mk-on
+                               THEN abap_true ELSE abap_false ).
+
+    delete_requested = COND #( WHEN requested_authorizations-%delete                = if_abap_behv=>mk-on
+                               THEN abap_true ELSE abap_false ).
+
+
+    LOOP AT travels INTO DATA(travel).
+      "get country_code of agency in corresponding instance on persistent table
+      READ TABLE travel_agency_country WITH KEY travel_uuid = travel-TravelUUID
+        ASSIGNING FIELD-SYMBOL(<travel_agency_country_code>).
+
+      "Auth check for active instances that have before image on persistent table
+      IF sy-subrc = 0.
+
+        "check auth for update
+        IF update_requested = abap_true.
+          update_granted = is_update_granted( <travel_agency_country_code>-country_code  ).
+          IF update_granted = abap_false.
+            APPEND VALUE #( %tky = travel-%tky
+                            %msg = NEW /DMO/CM_FLIGHT_MESSAGES(
+                                                     textid    = /DMO/CM_FLIGHT_MESSAGES=>not_authorized_for_agencyid
+                                                     agency_id = travel-AgencyID
+                                                     severity  = if_abap_behv_message=>severity-error )
+                            %element-AgencyID = if_abap_behv=>mk-on
+                           ) TO reported-travel.
+          ENDIF.
+        ENDIF.
+
+        "check auth for delete
+        IF delete_requested = abap_true.
+          delete_granted = is_delete_granted( <travel_agency_country_code>-country_code ).
+          IF delete_granted = abap_false.
+            APPEND VALUE #( %tky = travel-%tky
+                            %msg = NEW /DMO/CM_FLIGHT_MESSAGES(
+                                     textid   = /DMO/CM_FLIGHT_MESSAGES=>not_authorized_for_agencyid
+                                     agency_id = travel-AgencyID
+                                     severity = if_abap_behv_message=>severity-error )
+                            %element-AgencyID = if_abap_behv=>mk-on
+                           ) TO reported-travel.
+          ENDIF.
+        ENDIF.
+
+        " operations on draft instances and on active instances that have no persistent before image (eg Update on newly created instance)
+        " create authorization is checked, for newly created instances
+      ELSE.
+        update_granted = delete_granted = is_create_granted( ).
+        IF update_granted = abap_false.
+          APPEND VALUE #( %tky = travel-%tky
+                          %msg = NEW /DMO/CM_FLIGHT_MESSAGES(
+                                   textid   = /DMO/CM_FLIGHT_MESSAGES=>not_authorized
+                                   severity = if_abap_behv_message=>severity-error )
+                          %element-AgencyID = if_abap_behv=>mk-on
+                        ) TO reported-travel.
+        ENDIF.
+      ENDIF.
+
+      APPEND VALUE #( LET upd_auth = COND #( WHEN update_granted = abap_true THEN if_abap_behv=>auth-allowed
+                                             ELSE if_abap_behv=>auth-unauthorized )
+                          del_auth = COND #( WHEN delete_granted = abap_true THEN if_abap_behv=>auth-allowed
+                                             ELSE if_abap_behv=>auth-unauthorized )
+                      IN
+                       %tky = travel-%tky
+                       %update                = upd_auth
+                       %action-Edit           = upd_auth
+
+                       %delete                = del_auth
+                    ) TO result.
+    ENDLOOP.
+
+
+  ENDMETHOD.
+
+ENDCLASS.
+```
 
 ## Sperren
 
 ### Pessimistische Sperren
 
+```abap
+define behavior for /DMO/I_Travel_D alias Travel
+lock master
+...
+{
+    ...
+}
+
+define behavior for /DMO/I_Booking_D alias Booking
+lock dependent by _Travel
+...
+{
+    ...
+    association _Travel { }
+}
+```
+
 ### Optimistische Sperren
+
+```abap
+define behavior for /DMO/I_Travel_M alias Travel
+etag master LocalLastChangedAt
+...
+
+define behavior for /DMO/I_Booking_D alias Booking
+etag master LocalLastChangedAt
+...
+```
+
+```abap
+define behavior for ZI_SalesOrder alias SalesOrder
+etag master LastChangedAt
+...
+
+define behavior for ZI_SalesOrderItem alias Item
+etag dependant by _SalesOrder
+...
+{
+    association _SalesOrder { }
+}
+```
 
 ## Draft Handling
 
+```abap
+managed;
+strict;
+with draft;
+define behavior for /DMO/I_Travel_D alias Travel
+```
+
 ### Draft Tabellen
+
+```abap
+...
+define behavior for /DMO/I_Travel_D alias Travel
+...
+persistent table /dmo/a_travel_d
+draft table /dmo/d_travel_d
+...
+
+define behavior for /DMO/I_Booking_D alias Booking
+...
+persistent table /dmo/a_booking_d
+draft table /dmo/d_booking_d
+...
+```
 
 ### Draft etag Handling
 
+```abap
+define behavior for /DMO/I_Travel_D alias Travel
+...
+total etag LastChangedAt
+...
+```
+
 ### Draft Assoziationen
+
+```abap
+define behavior for /DMO/I_Travel_D alias Travel
+...
+{
+    ...
+    association _Booking { create; with draft; }
+}
+...
+```
 
 ### Draft Aktionen
 
+```abap
+define behavior for /DMO/I_Travel_D alias Travel
+...
+{
+    draft action Resume;
+    draft action Edit;
+    draft action Activate;
+    draft action Discard;
+    
+    draft determine action Prepare
+    {
+        validation validateAgency;
+        validation validateCustomer;
+        ...
+    }
+    
+    validation validateCustomer on save { ... }
+    validation validateAgency on save { ... }
+    ...
+}
+```
 
