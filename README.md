@@ -1707,6 +1707,65 @@ CLASS lhc_travel IMPLEMENTATION.
 ENDCLASS.
 ```
 
+#### Instance Authorization Beispiel
+
+```abap
+  METHOD get_instance_authorizations.
+    data: update_requested type abap_bool,
+          delete_requested type abap_bool.
+
+    read entities of ZMIND2RAP_I_Travel in local mode
+        ENTITY Travel
+            Fields ( AgencyId )
+            WITH CORRESPONDING #( keys )
+        RESULT data(travels)
+        failed failed.
+
+    check travels is not INITIAL.
+
+    update_requested = COND #( when requested_authorizations-%update = if_abap_behv=>mk-on then abap_true
+*                              Diese Zeile nur wenn Draft Handling aktiviert ist
+                               when requested_authorizations-%action-Edit = if_abap_behv=>mk-on then abap_true
+                               else abap_false ).
+    delete_requested = COND #( when requested_authorizations-%delete = if_abap_behv=>mk-on then abap_true
+                               else abap_false ).
+
+    LOOP AT travels ASSIGNING FIELD-SYMBOL(<agency>) GROUP BY <agency>-AgencyId.
+        data(update_authorized) = cond #( when update_requested = abap_true
+                                            then zcl_mind2rap_helper=>is_granted( agency = <agency>-AgencyId actvt = '02' )
+                                          else abap_false ).
+
+        data(delete_authorized) = cond #( when delete_requested = abap_true
+                                            then zcl_mind2rap_helper=>is_granted( agency = <agency>-AgencyId actvt = '06' )
+                                          else abap_false ).
+
+        LOOP AT GROUP <agency> ASSIGNING FIELD-SYMBOL(<travel>).
+            if ( update_requested = abap_true AND update_authorized = abap_false ) OR
+               ( delete_requested = abap_true AND delete_authorized = abap_false ).
+                append value #( %tky = <travel>-%tky
+                                %msg = new_message(
+                                    id = 'ZCM_MIND2RAP_TRAVEL'
+                                    number = '007'
+                                    severity = if_abap_behv_message=>severity-error
+                                    v1 = <travel>-TravelId
+                                ) ) to reported-travel.
+            endif.
+
+            append value #( let update_auth = cond #( when update_authorized = abap_true then if_abap_behv=>auth-allowed
+                                                      else if_abap_behv=>auth-unauthorized )
+                                delete_auth = cond #( when delete_authorized = abap_true then if_abap_behv=>auth-allowed
+                                                      else if_abap_behv=>auth-unauthorized )
+                            in
+                                %tky = <travel>-%tky
+                                %update = update_auth
+                                %delete = delete_auth
+*                               Diese Aktion nur wenn Draft Handling aktiviert ist
+                                %action-Edit = update_auth ) to result.
+        ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+```
+
 ## Sperren
 
 ### Pessimistische Sperren
