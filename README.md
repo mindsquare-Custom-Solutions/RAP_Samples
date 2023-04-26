@@ -1824,3 +1824,86 @@ define behavior for /DMO/I_Travel_D alias Travel
 }
 ```
 
+## Implementierung Speichersequenz
+
+### Managed scenario with unmanaged save
+
+```cds
+define behavior for /DMO/I_BookSuppl_M alias booksuppl
+implementation in class /DMO/BP_BOOKINGSUPPLEMENT_M unique
+with unmanaged save
+...
+{
+   ... 
+}
+```
+
+```abap
+CLASS lcl_save DEFINITION INHERITING FROM cl_abap_behavior_saver.
+
+  PROTECTED SECTION.
+    METHODS save_modified REDEFINITION.
+
+ENDCLASS.
+
+
+CLASS lcl_save IMPLEMENTATION.
+
+ DATA booksuppls_db TYPE STANDARD TABLE OF /dmo/booksuppl_m.
+
+    " (1) Get instance data of all instances that have been created
+    IF create-booksuppl IS NOT INITIAL.
+      booksuppls_db = CORRESPONDING #( create-booksuppl ).
+
+      CALL FUNCTION '/DMO/FLIGHT_BOOKSUPPL_C' EXPORTING values = booksuppls_db .
+
+    ENDIF.
+
+    " (2) Get instance data of all instances that have been updated during the transaction
+    booksuppls_db = CORRESPONDING #( update-booksuppl ).
+    IF booksuppls_db IS NOT INITIAL.
+
+      " Read all field values from database
+      SELECT * FROM /dmo/booksuppl_m FOR ALL ENTRIES IN @booksuppls_db
+               WHERE booking_supplement_id = @booksuppls_db-booking_supplement_id
+               INTO TABLE @booksuppls_db .
+
+      " Take over field values that have been changed during the transaction
+      LOOP AT update-booksuppl ASSIGNING FIELD-SYMBOL(<unmanaged_booksuppl>).
+        ASSIGN booksuppls_db[ travel_id  = <unmanaged_booksuppl>-travel_id
+                              booking_id = <unmanaged_booksuppl>-booking_id
+                   booking_supplement_id = <unmanaged_booksuppl>-booking_supplement_id
+                            ] TO FIELD-SYMBOL(<booksuppl_db>).
+
+        IF <unmanaged_booksuppl>-%control-supplement_id = if_abap_behv=>mk-on.
+          <booksuppl_db>-supplement_id = <unmanaged_booksuppl>-supplement_id.
+        ENDIF.
+
+        IF <unmanaged_booksuppl>-%control-price = if_abap_behv=>mk-on.
+          <booksuppl_db>-price = <unmanaged_booksuppl>-price.
+        ENDIF.
+
+        IF <unmanaged_booksuppl>-%control-currency_code = if_abap_behv=>mk-on.
+          <booksuppl_db>-currency_code = <unmanaged_booksuppl>-currency_code.
+        ENDIF.
+
+      ENDLOOP.
+
+      " Update the complete instance data
+      CALL FUNCTION '/DMO/FLIGHT_BOOKSUPPL_U' EXPORTING values = booksuppls_db .
+
+    ENDIF.
+
+    " (3) Get keys of all travel instances that have been deleted during the transaction
+    IF delete-booksuppl IS NOT INITIAL.
+      booksuppls_db = CORRESPONDING #( delete-booksuppl ).
+
+      CALL FUNCTION '/DMO/FLIGHT_BOOKSUPPL_D' EXPORTING values = booksuppls_db .
+
+    ENDIF.
+
+
+  ENDMETHOD.
+
+ENDCLASS.
+```
