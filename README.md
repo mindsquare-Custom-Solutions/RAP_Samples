@@ -1,3 +1,5 @@
+<img src="https://mindsquare.de/files/logo-mindsquare-176x781.png" alt="mindsquare Logo" title="mindsquare AG" align="right">
+
 # Begleitmaterialien zur RAP Schulung
 
 Codebeispiele für die [mindsquare Restful Application Programming Model Schulung](https://mindsquare.de/schulungen/)
