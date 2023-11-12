@@ -680,17 +680,20 @@ define behavior for ZREX_C_Carrier alias Carrier
 
 ### Service Definition
 
+>Leading Entity Annotation ab S/4HANA Platform 2023/ BTP abap Environment 2308
+
 ```cds
-@EndUserText.label: 'RAP Example: Carrier'
-define service ZREX_Carrier {
-  expose ZREX_C_Carrier;
-  expose ZREX_C_Connection;
-  expose ZREX_C_Flight;
-  expose ZMIND2E_I_Airport as Airport;
-  expose I_Country as Country;
-  expose I_CountryVH as CountryVH;
-  expose I_Currency as Currency;
-  expose I_CurrencyStdVH as CurrencyVH;
+@EndUserText.label: 'Released Objects: CDS'
+@ObjectModel.leadingEntity.name: 'ZC_RO_CDSViewTP'
+define service ZUI_RO_CDSVIEW {
+  expose ZC_RO_CDSViewTP                as CDSViewTP;
+  expose ZC_RO_CDSViewBusinessContextTP as BusinessContextTP;
+  expose ZC_RO_CDSViewCapabilityTP      as CDSViewCapabilityTP;
+  expose ZC_RO_CDSViewFieldTP           as FieldTP;
+  expose ZC_RO_CDSViewSuccessorTP       as SuccessorTP;
+  expose ZI_RO_ReleaseState             as ReleaseState;
+  expose ZI_RO_SupportedCapability      as Capability;
+  expose ZI_RO_SupportedCapabilityText  as CapabilityText;
 }
 ```
 
