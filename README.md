@@ -858,11 +858,18 @@ MODIFY ENTITIES OF /DMO/I_Travel_D IN LOCAL MODE
 ### EML Aktionen ausführen
 
 ```abap
-MODIFY ENTITIES OF /DMO/I_Travel_D IN LOCAL MODE
-    ENTITY Travel
-        EXECUTE reCalcTotalPrice
-        FROM CORRESPONDING #( keys )
-    REPORTED DATA(lt_reported).
+DATA travel_action TYPE TABLE FOR ACTION IMPORT ZMIND2RAP_I_Travel~bookTravel.
+    travel_action = VALUE #( ( %is_draft = if_abap_behv=>mk-off
+                               TravelId  = '00000009'
+                               %param    = VALUE #( bookFlights = abap_true ) ) ).
+
+    MODIFY ENTITIES OF ZMIND2RAP_I_Travel
+           ENTITY Travel
+               EXECUTE bookTravel
+               FROM CORRESPONDING #( travel_action )
+           RESULT DATA(action_result)
+           FAILED DATA(action_failed)
+           REPORTED DATA(action_reported).
 ```
 
 ### EML Verschiedene Operationen in einer Modifiy Anweisung
