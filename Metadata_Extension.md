@@ -79,7 +79,7 @@ annotate view ZMIND2RAP_C_Travel with
   @UI.fieldGroup: [{ qualifier: 'Details', position: 20 }]
   @Consumption.valueHelpDefinition: [{
       entity: {
-          name: 'ZMIND2E_I_AgencyVH',
+          name: 'ZI_I_MSQ_AgencyVH',
           element: 'AgencyId'
       },
       useForValidation: true
@@ -90,7 +90,7 @@ annotate view ZMIND2RAP_C_Travel with
   @UI.lineItem: [{ position: 30 }]
   @Consumption.valueHelpDefinition: [{
       entity: {
-          name: 'ZMIND2E_I_CustomerVH',
+          name: 'ZI_I_MSQ_CustomerVH',
           element: 'CustomerId'
       },
       useForValidation: true
@@ -167,7 +167,7 @@ annotate view ZMIND2RAP_C_Travel with
 
 annotate view ZMIND2RAP_C_Booking with
 {
-  @UI.facet: [{
+   @UI.facet: [{
       type: #COLLECTION,
       id: 'DetailsCollection',
       purpose: #STANDARD,
@@ -205,7 +205,7 @@ annotate view ZMIND2RAP_C_Booking with
   @UI.lineItem: [{ qualifier: 'Booking', position: 30 }]
   @UI.fieldGroup: [{ qualifier: 'Flight', position: 30 }]
   @Consumption.valueHelpDefinition: [{
-    entity: { name: 'ZMIND2E_I_FlightVH', element: 'CarrierId' },
+    entity: { name: 'ZI_I_MSQ_FlightVH', element: 'CarrierId' },
     additionalBinding: [
       { element: 'ConnectionID', localElement: 'ConnectionId', usage: #RESULT },
       { element: 'FlightDate', localElement: 'FlightDate', usage: #RESULT }
@@ -216,7 +216,7 @@ annotate view ZMIND2RAP_C_Booking with
   @UI.lineItem: [{ qualifier: 'Booking', position: 40 }]
   @UI.fieldGroup: [{ qualifier: 'Flight', position: 40 }]
   @Consumption.valueHelpDefinition: [{
-    entity: { name: 'ZMIND2E_I_FlightVH', element: 'ConnectionID' },
+    entity: { name: 'ZI_I_MSQ_FlightVH', element: 'ConnectionID' },
     additionalBinding: [
       { element: 'CarrierId', localElement: 'CarrierId', usage: #FILTER_AND_RESULT },
       { element: 'FlightDate', localElement: 'FlightDate', usage: #RESULT }
@@ -227,7 +227,7 @@ annotate view ZMIND2RAP_C_Booking with
   @UI.lineItem: [{ qualifier: 'Booking', position: 50 }]
   @UI.fieldGroup: [{ qualifier: 'Flight', position: 50 }]
   @Consumption.valueHelpDefinition: [{
-    entity: { name: 'ZMIND2E_I_FlightVH', element: 'FlightDate' },
+    entity: { name: 'ZI_I_MSQ_FlightVH', element: 'FlightDate' },
     additionalBinding: [
       { element: 'CarrierId', localElement: 'CarrierId', usage: #FILTER_AND_RESULT },
       { element: 'ConnectionID', localElement: 'ConnectionId', usage: #FILTER_AND_RESULT }
