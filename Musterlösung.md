@@ -1,7 +1,7 @@
 # Lösungsvorschläge
 
 ## 1 Datenmodell erstellen
-Travel Root Entität:
+Travel Root Entität (ohne Abhängigkeiten zu Booking und Booking Supplement):
 ```@AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Travel Root Entity'
@@ -12,8 +12,8 @@ Travel Root Entität:
   dataClass: #MIXED
 }
 @ObjectModel.representativeKey: 'TravelId'
-define root view entity ZMIND2_I_Travel as select from zmind2_travel
-  composition [0..*] of ZMIND2_I_Booking       as _Booking
+define root view entity ZI_<your-name-abbreviation>_Travel as select from zmind2_travel
+//  composition [0..*] of ZI_<your-name-abbreviation>_Booking       as _Booking
   association [0..1] to ZMIND2E_I_Agency       as _Agency   on $projection.AgencyId = _Agency.AgencyId
   association [0..1] to ZMIND2E_I_Customer     as _Customer on $projection.CustomerId = _Customer.CustomerId
   association [0..1] to I_Currency             as _Currency on $projection.CurrencyCode = _Currency.Currency
@@ -64,7 +64,7 @@ define root view entity ZMIND2_I_Travel as select from zmind2_travel
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       locallastchangedat                                            as LocalLastChangedAt,
 
-      _Booking,
+//      _Booking,
       _Agency,
       _Customer,
       _Currency,
@@ -72,7 +72,7 @@ define root view entity ZMIND2_I_Travel as select from zmind2_travel
 }
 ```
 
-Booking Entität:
+Booking Entität (ohne Abhängigkeiten zu Travel und Booking Supplement):
 ```
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -84,10 +84,10 @@ Booking Entität:
   dataClass: #MIXED
 }
 @ObjectModel.representativeKey: 'BookingId'
-define view entity ZMIND2_I_Booking
+define view entity ZI_<your-name-abbreviation>_Booking
   as select from zmind2_booking
-  association        to parent ZMIND2_I_Travel   as _Travel     on  $projection.TravelId = _Travel.TravelId
-  composition [0..*] of ZMIND2_I_BookingSupplements as _BookingSupplement
+//  association        to parent ZI_<your-name-abbreviation>_Travel   as _Travel     on  $projection.TravelId = _Travel.TravelId
+//  composition [0..*] of ZI_<your-name-abbreviation>_BookingSupplements as _BookingSupplement
   association [0..1] to ZMIND2E_I_BookingStatus  as _Status     on  $projection.BookingStatus = _Status.BookingStatus
   association [0..1] to ZMIND2E_I_Carrier        as _Carrier    on  $projection.CarrierId = _Carrier.CarrierId
   association [0..1] to ZMIND2E_I_Connection     as _Connection on  $projection.CarrierId    = _Connection.CarrierId
@@ -122,8 +122,8 @@ define view entity ZMIND2_I_Booking
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       local_last_changed_at as LocalLastChangedAt,
 
-      _Travel,
-      _BookingSupplement,
+//      _Travel,
+//      _BookingSupplement,
       _Status,
       _Carrier,
       _Connection,
@@ -131,22 +131,22 @@ define view entity ZMIND2_I_Booking
 }
 ```
 
-Booking Supplements Entität:
+Booking Supplements Entität (ohne Abhängigkeiten zu Travel und Booking):
 ```@AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Booking BO'
-define view entity ZMIND2_I_BookingSupplements
+define view entity ZI_<your-name-abbreviation>_BookingSupplements
   as select from zmind2_book_supp
-  association        to parent ZMIND2_I_Booking as _Booking    on  $projection.BookingId = _Booking.BookingId
-                                                                  and $projection.TravelId  = _Booking.TravelId
-  association [1..1] to ZMIND2_I_Travel         as _Travel     on  $projection.TravelId = _Travel.TravelId
+//  association        to parent ZI_<your-name-abbreviation>_Booking as _Booking    on  $projection.BookingId = _Booking.BookingId
+//                                                                  and $projection.TravelId  = _Booking.TravelId
+//  association [1..1] to ZI_<your-name-abbreviation>_Travel         as _Travel     on  $projection.TravelId = _Travel.TravelId
   association [0..1] to ZMIND2E_I_Supplement    as _Supplement on  $projection.SupplementId = _Supplement.SupplementId
 {
 
-      @ObjectModel.foreignKey.association: '_Travel'
+//      @ObjectModel.foreignKey.association: '_Travel'
   key travel_id             as TravelId,
 
-      @ObjectModel.foreignKey.association: '_Booking'
+//      @ObjectModel.foreignKey.association: '_Booking'
   key booking_id            as BookingId,
   key booking_supplement_id as BookingSupplementId,
 
@@ -160,8 +160,8 @@ define view entity ZMIND2_I_BookingSupplements
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       last_changed_at       as LastChangedAt,
 
-      _Booking,
-      _Travel,
+//      _Booking,
+//      _Travel,
       _Supplement
 }
 ```
