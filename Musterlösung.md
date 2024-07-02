@@ -87,7 +87,7 @@ Booking Entität:
 define view entity ZMIND2_I_Booking
   as select from zmind2_booking
   association        to parent ZMIND2_I_Travel   as _Travel     on  $projection.TravelId = _Travel.TravelId
-  composition [0..*] of ZI_JR_BookingSupplements as _BookingSupplement
+  composition [0..*] of ZMIND2_I_BookingSupplements as _BookingSupplement
   association [0..1] to ZMIND2E_I_BookingStatus  as _Status     on  $projection.BookingStatus = _Status.BookingStatus
   association [0..1] to ZMIND2E_I_Carrier        as _Carrier    on  $projection.CarrierId = _Carrier.CarrierId
   association [0..1] to ZMIND2E_I_Connection     as _Connection on  $projection.CarrierId    = _Connection.CarrierId
