@@ -1,5 +1,173 @@
 # Lösungsvorschläge
 
+## 1 Datenmodell erstellen
+Travel Root Entität:
+```@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Travel Root Entity'
+@Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+  serviceQuality: #X,
+  sizeCategory: #S,
+  dataClass: #MIXED
+}
+@ObjectModel.representativeKey: 'TravelId'
+define root view entity ZMIND2_I_Travel as select from zmind2_travel
+  composition [0..*] of ZMIND2_I_Booking       as _Booking
+  association [0..1] to ZMIND2E_I_Agency       as _Agency   on $projection.AgencyId = _Agency.AgencyId
+  association [0..1] to ZMIND2E_I_Customer     as _Customer on $projection.CustomerId = _Customer.CustomerId
+  association [0..1] to I_Currency             as _Currency on $projection.CurrencyCode = _Currency.Currency
+  association [0..1] to ZMIND2E_I_TravelStatus as _Status   on $projection.Status = _Status.TravelStatus
+{
+  key travel_id                                                     as TravelId,
+
+      @ObjectModel.foreignKey.association: '_Agency'
+      agency_id                                                     as AgencyId,
+
+      @ObjectModel.foreignKey.association: '_Customer'
+      @ObjectModel.text.element: ['CustomerName']
+      customer_id                                                   as CustomerId,
+      concat_with_space(_Customer.FirstName, _Customer.LastName, 1) as CustomerName,
+
+
+      begin_date                                                    as BeginDate,
+      end_date                                                      as EndDate,
+
+      @Semantics.amount.currencyCode: 'CurrencyCode'
+      booking_fee                                                   as BookingFee,
+
+      @Semantics.amount.currencyCode: 'CurrencyCode'
+      total_price                                                   as TotalPrice,
+      currency_code                                                 as CurrencyCode,
+      description                                                   as Description,
+      status                                                        as Status,
+
+      case status
+        when 'N' then 5
+        when 'B' then 3
+        when 'X' then 1
+        else 0
+      end                                                           as StatusCriticality,
+
+      @Semantics.user.createdBy: true
+      createdby                                                     as CreatedBy,
+
+      @Semantics.systemDateTime.createdAt: true
+      createdat                                                     as CreatedAt,
+
+      @Semantics.user.lastChangedBy: true
+      lastchangedby                                                 as LastChangedBy,
+
+      @Semantics.systemDateTime.lastChangedAt: true
+      lastchangedat                                                 as LastChangedAt,
+
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      locallastchangedat                                            as LocalLastChangedAt,
+
+      _Booking,
+      _Agency,
+      _Customer,
+      _Currency,
+      _Status
+}
+```
+
+Booking Entität:
+```
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Booking base view'
+@Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+  serviceQuality: #X,
+  sizeCategory: #S,
+  dataClass: #MIXED
+}
+@ObjectModel.representativeKey: 'BookingId'
+define view entity ZMIND2_I_Booking
+  as select from zmind2_booking
+  association        to parent ZMIND2_I_Travel   as _Travel     on  $projection.TravelId = _Travel.TravelId
+  composition [0..*] of ZI_JR_BookingSupplements as _BookingSupplement
+  association [0..1] to ZMIND2E_I_BookingStatus  as _Status     on  $projection.BookingStatus = _Status.BookingStatus
+  association [0..1] to ZMIND2E_I_Carrier        as _Carrier    on  $projection.CarrierId = _Carrier.CarrierId
+  association [0..1] to ZMIND2E_I_Connection     as _Connection on  $projection.CarrierId    = _Connection.CarrierId
+                                                                and $projection.ConnectionId = _Connection.ConnectionId
+  association [0..1] to ZMIND2E_I_Customer       as _Customer   on  $projection.CustomerId = _Customer.CustomerId
+{
+  key travel_id             as TravelId,
+  key booking_id            as BookingId,
+
+      @ObjectModel.foreignKey.association: '_Status'
+      booking_status        as BookingStatus,
+
+      case booking_status
+        when 'N' then 5
+        when 'B' then 3
+        when 'X' then 1
+        else 0
+      end                   as BookingStatusCriticality,
+
+      booking_date          as BookingDate,
+      customer_id           as CustomerId,
+
+      @ObjectModel.foreignKey.association: '_Carrier'
+      carrier_id            as CarrierId,
+      connection_id         as ConnectionId,
+      flight_date           as FlightDate,
+
+      @Semantics.amount.currencyCode: 'CurrencyCode'
+      flight_price          as FlightPrice,
+      currency_code         as CurrencyCode,
+
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      local_last_changed_at as LocalLastChangedAt,
+
+      _Travel,
+      _BookingSupplement,
+      _Status,
+      _Carrier,
+      _Connection,
+      _Customer
+}
+```
+
+Booking Supplements Entität:
+```@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Booking BO'
+define view entity ZMIND2_I_BookingSupplements
+  as select from zmind2_book_supp
+  association        to parent ZMIND2_I_Booking as _Booking    on  $projection.BookingId = _Booking.BookingId
+                                                                  and $projection.TravelId  = _Booking.TravelId
+  association [1..1] to ZMIND2_I_Travel         as _Travel     on  $projection.TravelId = _Travel.TravelId
+  association [0..1] to ZMIND2E_I_Supplement    as _Supplement on  $projection.SupplementId = _Supplement.SupplementId
+{
+
+      @ObjectModel.foreignKey.association: '_Travel'
+  key travel_id             as TravelId,
+
+      @ObjectModel.foreignKey.association: '_Booking'
+  key booking_id            as BookingId,
+  key booking_supplement_id as BookingSupplementId,
+
+      @ObjectModel.foreignKey.association: '_Supplement'
+      supplement_id         as SupplementId,
+
+      @Semantics.amount.currencyCode: 'CurrencyCode'
+      price                 as Price,
+      currency_code         as CurrencyCode,
+
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      last_changed_at       as LastChangedAt,
+
+      _Booking,
+      _Travel,
+      _Supplement
+}
+```
+
+
+
 ## 3.2 Felder & Aktionen
 
 Travel Entität:
