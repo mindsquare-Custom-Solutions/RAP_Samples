@@ -12,7 +12,7 @@ Travel Root Entität (ohne Abhängigkeiten zu Booking und Booking Supplement):
   dataClass: #MIXED
 }
 @ObjectModel.representativeKey: 'TravelId'
-define root view entity ZI_<your-name-abbreviation>_Travel as select from zmind2_travel
+define root view entity ZI_<your-name-abbreviation>_TravelTP as select from zmind2_travel
 //  composition [0..*] of ZI_<your-name-abbreviation>_Booking       as _Booking
   association [0..1] to ZMIND2E_I_Agency       as _Agency   on $projection.AgencyId = _Agency.AgencyId
   association [0..1] to ZMIND2E_I_Customer     as _Customer on $projection.CustomerId = _Customer.CustomerId
@@ -84,9 +84,9 @@ Booking Entität (ohne Abhängigkeiten zu Travel und Booking Supplement):
   dataClass: #MIXED
 }
 @ObjectModel.representativeKey: 'BookingId'
-define view entity ZI_<your-name-abbreviation>_Booking
+define view entity ZI_<your-name-abbreviation>_BookingTP
   as select from zmind2_booking
-//  association        to parent ZI_<your-name-abbreviation>_Travel   as _Travel     on  $projection.TravelId = _Travel.TravelId
+//  association        to parent ZI_<your-name-abbreviation>_TravelTP   as _Travel     on  $projection.TravelId = _Travel.TravelId
 //  composition [0..*] of ZI_<your-name-abbreviation>_BookingSupplements as _BookingSupplement
   association [0..1] to ZMIND2E_I_BookingStatus  as _Status     on  $projection.BookingStatus = _Status.BookingStatus
   association [0..1] to ZMIND2E_I_Carrier        as _Carrier    on  $projection.CarrierId = _Carrier.CarrierId
@@ -135,9 +135,9 @@ Booking Supplements Entität (ohne Abhängigkeiten zu Travel und Booking):
 ```@AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Booking BO'
-define view entity ZI_<your-name-abbreviation>_BookingSupplements
+define view entity ZI_<your-name-abbreviation>_BookingSupplementsTP
   as select from zmind2_book_supp
-//  association        to parent ZI_<your-name-abbreviation>_Booking as _Booking    on  $projection.BookingId = _Booking.BookingId
+//  association        to parent ZI_<your-name-abbreviation>_BookingTP as _Booking    on  $projection.BookingId = _Booking.BookingId
 //                                                                  and $projection.TravelId  = _Booking.TravelId
 //  association [1..1] to ZI_<your-name-abbreviation>_Travel         as _Travel     on  $projection.TravelId = _Travel.TravelId
   association [0..1] to ZMIND2E_I_Supplement    as _Supplement on  $projection.SupplementId = _Supplement.SupplementId
@@ -217,8 +217,8 @@ association _Travel;
 ## 3.3 EML
 
 ```abap
-DATA: travels  TYPE TABLE FOR CREATE zmind2rap_i_travel,
-      bookings TYPE TABLE FOR CREATE ZMIND2RAP_I_Travel\_Booking.
+DATA: travels  TYPE TABLE FOR CREATE zmind2rap_i_TravelTP,
+      bookings TYPE TABLE FOR CREATE ZMIND2RAP_I_TravelTP\_Booking.
 
 travels = VALUE #( ( %cid = 'TRAVEL_1'
                         TravelId = 4000
