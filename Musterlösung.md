@@ -12,8 +12,8 @@ Travel Root Entität (ohne Abhängigkeiten zu Booking und Booking Supplement):
   dataClass: #MIXED
 }
 @ObjectModel.representativeKey: 'TravelId'
-define root view entity ZI_<your-name-abbreviation>_TravelTP as select from zmind2_travel
-//  composition [0..*] of ZI_<your-name-abbreviation>_Booking       as _Booking
+define root view entity ZR_<your-name-abbreviation>_TravelTP as select from zmind2_travel
+//  composition [0..*] of ZR_<your-name-abbreviation>_BookingTP       as _Booking
   association [0..1] to ZMIND2E_I_Agency       as _Agency   on $projection.AgencyId = _Agency.AgencyId
   association [0..1] to ZMIND2E_I_Customer     as _Customer on $projection.CustomerId = _Customer.CustomerId
   association [0..1] to I_Currency             as _Currency on $projection.CurrencyCode = _Currency.Currency
@@ -84,10 +84,10 @@ Booking Entität (ohne Abhängigkeiten zu Travel und Booking Supplement):
   dataClass: #MIXED
 }
 @ObjectModel.representativeKey: 'BookingId'
-define view entity ZI_<your-name-abbreviation>_BookingTP
+define view entity ZR_<your-name-abbreviation>_BookingTP
   as select from zmind2_booking
-//  association        to parent ZI_<your-name-abbreviation>_TravelTP   as _Travel     on  $projection.TravelId = _Travel.TravelId
-//  composition [0..*] of ZI_<your-name-abbreviation>_BookingSupplements as _BookingSupplement
+//  association        to parent ZR_<your-name-abbreviation>_TravelTP   as _Travel     on  $projection.TravelId = _Travel.TravelId
+//  composition [0..*] of ZR_<your-name-abbreviation>_BookingSupplementTP as _BookingSupplement
   association [0..1] to ZMIND2E_I_BookingStatus  as _Status     on  $projection.BookingStatus = _Status.BookingStatus
   association [0..1] to ZMIND2E_I_Carrier        as _Carrier    on  $projection.CarrierId = _Carrier.CarrierId
   association [0..1] to ZMIND2E_I_Connection     as _Connection on  $projection.CarrierId    = _Connection.CarrierId
@@ -135,11 +135,11 @@ Booking Supplements Entität (ohne Abhängigkeiten zu Travel und Booking):
 ```@AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Booking BO'
-define view entity ZI_<your-name-abbreviation>_BookingSupplementsTP
+define view entity ZR_<your-name-abbreviation>_BookingSupplementTP
   as select from zmind2_book_supp
-//  association        to parent ZI_<your-name-abbreviation>_BookingTP as _Booking    on  $projection.BookingId = _Booking.BookingId
+//  association        to parent ZR_<your-name-abbreviation>_BookingTP as _Booking    on  $projection.BookingId = _Booking.BookingId
 //                                                                  and $projection.TravelId  = _Booking.TravelId
-//  association [1..1] to ZI_<your-name-abbreviation>_Travel         as _Travel     on  $projection.TravelId = _Travel.TravelId
+//  association [1..1] to ZR_<your-name-abbreviation>_TravelTP         as _Travel     on  $projection.TravelId = _Travel.TravelId
   association [0..1] to ZMIND2E_I_Supplement    as _Supplement on  $projection.SupplementId = _Supplement.SupplementId
 {
 
