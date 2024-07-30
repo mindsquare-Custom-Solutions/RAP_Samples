@@ -168,7 +168,7 @@ define view entity ZR_<your-name-abbreviation>_BookingSupplementTP
 
 ## 2 Behavior Definition anlegen
 ```
-managed implementation in class zbp_i_jr_travel unique;
+managed implementation in class zbp_i_<your-name-abbreviation>_travel unique;
 strict ( 2 );
 
 define behavior for ZR_<your-name-abbreviation>_TravelTP alias Travel
