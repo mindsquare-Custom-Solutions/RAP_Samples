@@ -166,6 +166,98 @@ define view entity ZR_<your-name-abbreviation>_BookingSupplementTP
 }
 ```
 
+## 2 Behavior Definition anlegen
+```
+managed implementation in class zbp_i_jr_travel unique;
+strict ( 2 );
+
+define behavior for ZR_<your-name-abbreviation>_TravelTP alias Travel
+persistent table zmind2_travel
+lock master
+authorization master ( instance )
+//etag master <field_name>
+{
+  create;
+  update;
+  delete;
+
+  field ( readonly ) TravelId;
+
+  mapping for zmind2_travel {
+    TravelId = travel_id;
+    AgencyId = agency_id;
+    CustomerId = customer_id;
+    BeginDate = begin_date;
+    EndDate = end_date;
+    BookingFee = booking_fee;
+    TotalPrice = total_price;
+    CurrencyCode = currency_code;
+    Description = description;
+    Status = status;
+    CreatedBy = createdby;
+    CreatedAt = createdat;
+    LastChangedBy = lastchangedby;
+    LastChangedAt = lastchangedat;
+    LocalLastChangedAt = locallastchangedat;
+  }
+
+  association _Booking { create; }
+}
+
+define behavior for ZR_<your-name-abbreviation>_BookingTP alias Booking
+persistent table zmind2_booking
+lock dependent by _Travel
+authorization dependent by _Travel
+//etag master <field_name>
+{
+  update;
+  delete;
+
+  field ( readonly ) TravelId, BookingId;
+
+  mapping for zmind2_booking {
+    TravelId = travel_id;
+    BookingId = booking_id;
+    BookingStatus = booking_status;
+    BookingDate = booking_date;
+    CustomerId = customer_id;
+    CarrierId = carrier_id;
+    ConnectionId = connection_id;
+    FlightDate = flight_date;
+    FlightPrice = flight_price;
+    CurrencyCode = currency_code;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+
+  association _Travel;
+  association _BookingSupplement { create; }
+}
+
+define behavior for ZR_<your-name-abbreviation>_BookingSupplementTP alias BookingSupplement
+persistent table zmind2_book_supp
+lock dependent by _Travel
+authorization dependent by _Travel
+//etag master <field_name>
+{
+  update;
+  delete;
+
+  field ( readonly ) BookingId, TravelId, BookingSupplementId;
+
+  mapping for zmind2_book_supp {
+    TravelId = travel_id;
+    BookingId = booking_id;
+    BookingSupplementId = booking_supplement_id;
+    SupplementId = supplement_id;
+    Price = price;
+    CurrencyCode = currency_code;
+    LastChangedAt = last_changed_at;
+  }
+
+  association _Travel;
+  association _Booking;
+}
+```
 
 
 ## 3.2 Felder & Aktionen
