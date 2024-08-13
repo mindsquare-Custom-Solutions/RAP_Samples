@@ -1,4 +1,4 @@
-# Lösungsvorschläge
+ # Lösungsvorschläge
 
 ## 1 Datenmodell erstellen
 Travel Root Entität (ohne Abhängigkeiten zu Booking und Booking Supplement):
@@ -91,7 +91,7 @@ define view entity ZR_<your-name-abbreviation>_BookingSupplementTP as select fro
 
 ```
 
-## 2 Behavior Definition anlegen
+## 2 & 3 Behavior Definition anlegen
 ```
 managed implementation in class zbp_i_<your-name-abbreviation>_travel unique;
 strict ( 2 );
@@ -184,6 +184,121 @@ authorization dependent by _Travel
 }
 ```
 
+## 4 Business Object Projections
+
+Travel Entität:
+```@EndUserText.label: 'Travel BO projection View'
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+define root view entity ZC_<your-name-abbreviation>_TravelTP
+  provider contract transactional_query as projection on ZR_<your-name-abbreviation>_TravelTP
+{
+  key TravelID,
+  AgencyID,
+  CustomerID,
+  BeginDate,
+  EndDate,
+  BookingFee,
+  TotalPrice,
+  CurrencyCode,
+  Description,
+  Status,
+  CreatedBy,
+  CreatedAt,
+  LastChangedBy,
+  LastChangedAt,
+  LocalLastChangedAt,
+  
+  /* Associations */
+  _Agency,
+  _Booking : redirected to composition child ZC_<your-name-abbreviation>_BookingTP,
+  _Currency,
+  _Customer,
+  _Status
+}
+```
+
+Booking Entität:
+```@EndUserText.label: 'Booking BO projection view'
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+define view entity ZC_<your-name-abbreviation>_BookingTP
+  as projection on ZR_<your-name-abbreviation>_BookingTP
+{
+  key TravelID,
+  key BookingID,
+  BookingDate,
+  CustomerID,
+  CarrierId,
+  BookingStatus,
+  ConnectionID,
+  FlightDate,
+  FlightPrice,
+  CurrencyCode,
+  LocalLastChangedAt,
+  
+  /* Associations */
+  _BookingSupplement : redirected to composition child ZC_<your-name-abbreviation>_BookingSupplementTP,
+  _Carrier,
+  _Connection,
+  _Currency,
+  _Customer,
+  _Status,
+  _Travel : redirected to parent ZC_<your-name-abbreviation>_TravelTP
+}
+```
+
+Booking Supplement Entität:
+```@EndUserText.label: 'Booking Supplement BO projection view'
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+define view entity ZC_<your-name-abbreviation>_BookingSupplementTP
+  as projection on ZR_<your-name-abbreviation>_BookingSupplementTP
+{
+  key TravelID,
+  key BookingID,
+  key BookingSupplementID,
+      SupplementID,
+      Price,
+      CurrencyCode,
+
+      /* Associations */
+      _Booking : redirected to parent ZC_<your-name-abbreviation>_BookingTP,
+      _Currency,
+      _Product,
+      _SupplementText,
+      _Travel : redirected to ZC_<your-name-abbreviation>_TravelTP
+}
+```
+
+Behavior Definition:
+```projection;
+strict ( 2 );
+
+define behavior for ZC_<your-name-abbreviation>_TravelTP alias Travel
+{
+  use create;
+  use update;
+  use delete;
+
+  use association _Booking { create; }
+}
+
+define behavior for ZC_<your-name-abbreviation>_BookingTP alias Booking
+{
+  use update;
+  use delete;
+
+  use association _Travel;
+  use association _BookingSupplement { create; }
+}
+
+define behavior for ZC_<your-name-abbreviation>_BookingSupplementTP alias BookingSupplement
+{
+  use update;
+  use delete;
+
+  use association _Travel;
+  use association _Booking;
+}
+```
 
 ## 3.2 Felder & Aktionen
 
