@@ -4,6 +4,17 @@
 
 Codebeispiele für die [mindsquare Restful Application Programming Model Schulung](https://mindsquare.de/schulungen/)
 
+
+**!!! IMPORTANT !!!**
+
+There are preconditions listed for every step before you are able to execute the code in case you want to test it for yourself.
+The preconditions don't list everything absolutely necessary for the code to be functional, mostly just the last step (else the preconditions would grow to unreadable levels with every step). Example:
+
+To define ZC_TravelTP (the Projection View), the precondition lists ZR_TravelTP (Root View Entity) for the code to work. But for ZR_TravelTP to work, you need to define ZI_Travel (Basic View) first (and everything else listed for every step).
+
+So, if necessary, follow the chain to the beginning and start copying from there if you haven't done so yet. Use the search function (CTRL + F) for easier navigation.
+
+
 ## Datenmodell
 TODO
 
