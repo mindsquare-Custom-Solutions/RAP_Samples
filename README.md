@@ -1735,9 +1735,7 @@ ENDCLASS.
 CLASS lhc_travel IMPLEMENTATION.
   METHOD get_instance_authorizations.
 
-    DATA: update_requested TYPE abap_bool,
-          delete_requested TYPE abap_bool,
-          update_granted   TYPE abap_bool,
+    DATA: update_granted   TYPE abap_bool,
           delete_granted   TYPE abap_bool.
 
     READ ENTITIES OF /DMO/R_Travel_D IN LOCAL MODE
@@ -1758,13 +1756,11 @@ CLASS lhc_travel IMPLEMENTATION.
           INTO  TABLE @DATA(travel_agency_country).
 
 
-    "edit is treated like update
-    update_requested = COND #( WHEN requested_authorizations-%update                = if_abap_behv=>mk-on OR
-                                    requested_authorizations-%action-Edit           = if_abap_behv=>mk-on
-                               THEN abap_true ELSE abap_false ).
+    " edit is treated like update
+    DATA(update_requested) = xsdbool(    requested_authorizations-%update      = if_abap_behv=>mk-on
+                                      OR requested_authorizations-%action-Edit = if_abap_behv=>mk-on ).
 
-    delete_requested = COND #( WHEN requested_authorizations-%delete                = if_abap_behv=>mk-on
-                               THEN abap_true ELSE abap_false ).
+    DATA(delete_requested) = xsdbool( requested_authorizations-%delete = if_abap_behv=>mk-on ).
 
 
     LOOP AT travels INTO DATA(travel).
